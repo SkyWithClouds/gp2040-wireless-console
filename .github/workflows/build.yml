@@ -1,0 +1,80 @@
+name: Console receiver CI
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  protocol:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/test.sh
+
+  rx-bridge:
+    runs-on: ubuntu-24.04
+    needs: protocol
+    container:
+      image: ghcr.io/nrfconnect/sdk-nrf-toolchain@sha256:d5dac06a877ca7f7bc75f851a7720284796424304045dd681cc6c4a29340ef0c
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: bridge
+      - name: Fetch the pinned nRF Connect SDK v2.9.2 modules
+        run: |
+          west init -l bridge
+          west update --narrow -o=--depth=1
+      - name: Build and check nRF52840 application
+        run: |
+          export ZEPHYR_BASE="$PWD/zephyr"
+          west build --no-sysbuild -b nologo_promicro/nrf52840 -d build bridge/rx-bridge -- -DBOARD_ROOT="$PWD/bridge"
+          python3 bridge/scripts/check_uf2.py build/zephyr/zephyr.uf2 build/zephyr/zephyr.bin
+          cp build/zephyr/zephyr.uf2 01-rx-bridge-nologo-26000.uf2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rx-bridge-${{ github.sha }}
+          path: 01-rx-bridge-nologo-26000.uf2
+          if-no-files-found: error
+
+  gp2040-rx:
+    runs-on: ubuntu-24.04
+    needs: protocol
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: box
+      - uses: actions/checkout@v4
+        with:
+          repository: raspberrypi/pico-sdk
+          ref: bddd20f928ce76142793bef434d4f75f4af6e433
+          path: sdk
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build the upstream Web Configurator
+        working-directory: box/gp2040-rx/www
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          test -s ../lib/httpd/fsdata.c
+      - name: Build and check RP2040 application
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib libusb-1.0-0-dev pkg-config ninja-build
+          cmake -S box/gp2040-rx -B build -G Ninja -DPICO_SDK_PATH="$PWD/sdk" -DPICO_BOARD=pico \
+            -DGP2040_BOARDCONFIG=WirelessRxBox -DCMAKE_BUILD_TYPE=Release -DSKIP_WEBBUILD=TRUE -DSKIP_SUBMODULES=TRUE \
+            -DPICOTOOL_GIT_BRANCH=de8ae5ac334e1126993f72a5c67949712fd1e1a4
+          cmake --build build --parallel 4
+          stem=build/GP2040-CE_0.7.12_WirelessRxBox
+          python3 box/scripts/check_uf2.py "$stem.uf2" "$stem.bin" --pico
+          cp "$stem.uf2" 02-rx-gp2040ce-pico.uf2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gp2040-rx-${{ github.sha }}
+          path: 02-rx-gp2040ce-pico.uf2
+          if-no-files-found: error

@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.20)
+find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+project(console_rx_bridge)
+target_include_directories(app PRIVATE ../common src)
+target_sources(app PRIVATE src/main.c src/spi.c src/link.c src/receiver.c ../common/air.c)

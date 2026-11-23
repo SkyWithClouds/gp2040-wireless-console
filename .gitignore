@@ -1,0 +1,8 @@
+/build*/
+/deps/
+node_modules/
+gp2040-rx/www/build/
+gp2040-rx/www/dist/
+gp2040-rx/lib/httpd/fsdata.c
+__pycache__/
+gp2040-rx/www/src_gen/

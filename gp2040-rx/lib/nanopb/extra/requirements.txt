@@ -1,0 +1,4 @@
+protobuf>=3.19
+grpcio-tools==1.71.0
+# nanopb generator imports pkg_resources.
+setuptools==80.9.0
