@@ -537,7 +537,10 @@ bool tud_deinit(uint8_t rhport) {
   return true;
 }
 
+#include "wireless_delivery.h"
+
 static void configuration_reset(uint8_t rhport) {
+  wireless_bus_reset();
   for (uint8_t i = 0; i < TOTAL_DRIVER_COUNT; i++) {
     usbd_class_driver_t const* driver = get_driver(i);
     TU_ASSERT(driver,);
@@ -549,10 +552,7 @@ static void configuration_reset(uint8_t rhport) {
   memset(_usbd_dev.ep2drv, DRVID_INVALID, sizeof(_usbd_dev.ep2drv)); // invalid mapping
 }
 
-#include "wireless_delivery.h"
-
 static void usbd_reset(uint8_t rhport) {
-  wireless_bus_reset();
   configuration_reset(rhport);
   usbd_control_reset();
 }

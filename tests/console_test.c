@@ -4,7 +4,7 @@
 #include "source.h"
 #include "transmitter.h"
 #include "link.h"
-#include "console_pad.h"
+#include "console_usb.h"
 
 static uint64_t nonce(void) { static uint64_t n; return ++n; }
 static struct gp_frame air_packet;
@@ -212,8 +212,42 @@ static void queue_edges(void)
 	assert(source_next(&s, 80, nonce, &f) && f.type == GP_HELLO);
 }
 
+static void delivery_edges(void)
+{
+	struct box_usb u = {0};
+	struct box_pad p = {.link = 10, .tag = 11, .kind = GP_INPUT, .state = {.seq = 65535}};
+	box_submitted(&u, &p, 0x81, 20); /* authentication or keepalive */
+	assert(!u.outstanding);
+	u.capture = true;
+	box_submitted(&u, &p, 0x02, 20);
+	box_submitted(&u, &p, 0x80, 20);
+	assert(!u.outstanding);
+	box_submitted(&u, &p, 0x81, 20);
+	box_finished(&u, &p, 0x82, true, 20);
+	assert(u.outstanding && !p.delivered);
+	box_finished(&u, &p, 0x81, true, 19);
+	assert(!p.delivered && !u.outstanding);
+	box_submitted(&u, &p, 0x81, 20);
+	box_finished(&u, &p, 0x81, false, 20);
+	assert(!p.delivered);
+	box_submitted(&u, &p, 0x81, 20);
+	struct gp_frame f = {21, GP_RESET, {.reset_reason = GP_TIMEOUT}};
+	box_receive(&p, &f, 1);
+	box_finished(&u, &p, 0x81, true, 20);
+	assert(!p.delivered && p.tag == 21);
+	box_submitted(&u, &p, 0x81, 20);
+	box_finished(&u, &p, 0x81, true, 20);
+	assert(p.delivered && box_reply(&p).data.status.flags == GP_USB_DONE_VALID);
+	p.kind = GP_INPUT;
+	p.state.seq = 65535;
+	f = (struct gp_frame){21, GP_INPUT, {.input = {.seq = 0, .lt = 97}}};
+	box_receive(&p, &f, 2);
+	assert(p.state.seq == 0 && p.state.lt == 97 && !p.delivered);
+}
+
 int main(void)
 {
+	delivery_edges();
 	bridge_run();
 	queue_edges();
 	puts("Console SPI and USB delivery, 1 kHz burst, LED completion, unplug, stall, overflow and wrap passed");

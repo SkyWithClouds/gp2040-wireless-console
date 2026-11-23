@@ -8,4 +8,4 @@
 | Model | nice!nano |
 | SoftDevice | S140 version 6.1.1 |
 
-已确认应用起址 `0x26000`、UF2 Family ID `0xADA52840` 与这两块板匹配。使用者报告阶段 1 UF2 启动成功，Windows 自动绑定 Xbox 360 驱动。joy.cpl 依次观察到 A、A+B、右、LT、RT、左摇杆右下与右摇杆左下，最后一步显示 A，对应主机 1P 玩家灯命令。阶段 2 的无线和 SPI 验收单独记录。
+已确认应用起址 `0x26000`、UF2 Family ID `0xADA52840` 与这两块板匹配。此前 Windows XInput 枚举与 1P 灯验收来自原无线桥工程。本接收盒使用相同板定义；NOLOGO #2 在应用模式下运行无线和 SPIS，主机 USB 改由接收 Pico 提供。双板及主机侧的实板验收见[清单](../../../docs/CHECKLIST.md)。

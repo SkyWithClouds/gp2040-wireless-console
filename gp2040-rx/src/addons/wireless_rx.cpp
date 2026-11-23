@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #include "addons/wireless_rx.h"
-#include "console_pad.h"
+#include "console_usb.h"
 #include "wireless_delivery.h"
 #include "storagemanager.h"
 #include "hardware/spi.h"
@@ -10,10 +10,7 @@
 namespace {
 constexpr uint SCK=18, MOSI=19, MISO=16, CS=17, READY=20;
 box_pad pad{};
-bool capture, outstanding;
-uint8_t endpoint;
-uint16_t bytes, sequence;
-uint64_t tag;
+box_usb usb{};
 uint32_t last_spi;
 uint64_t new_id() {
 	uint64_t value;
@@ -72,23 +69,14 @@ void WirelessRxAddon::process() {
 	gamepad->hasAnalogTriggers = gamepad->hasLeftAnalogStick = gamepad->hasRightAnalogStick = true;
 }
 
-bool wireless_pending() { return !pad.delivered && !outstanding; }
-void wireless_capture(bool enable) { capture = enable; }
-void wireless_submitted(uint8_t ep, uint16_t size) {
-	if (!capture || !(ep & 0x80) || ep == 0x80 || !wireless_pending()) return;
-	tag = pad.tag;
-	sequence = pad.state.seq;
-	endpoint = ep;
-	bytes = size;
-	outstanding = true;
-}
+bool wireless_pending() { return !pad.delivered && !usb.outstanding; }
+void wireless_capture(bool enable) { usb.capture = enable; }
+void wireless_submitted(uint8_t ep, uint16_t size) { box_submitted(&usb, &pad, ep, size); }
 void wireless_completed(uint8_t ep, bool success, uint32_t size) {
-	if (!outstanding || endpoint != ep) return;
-	outstanding = false;
-	box_complete(&pad, tag, sequence, success && size == bytes);
+	box_finished(&usb, &pad, ep, success, size);
 }
 void wireless_bus_reset() {
-	outstanding = capture = false;
+	usb = {};
 	pad.led_valid = false;
 	box_start(&pad, new_id());
 }

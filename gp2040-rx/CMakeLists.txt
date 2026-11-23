@@ -158,6 +158,7 @@ add_executable(${PROJECT_NAME}
 src/main.cpp
 src/addons/wireless_rx.cpp
 ../common/console_pad.c
+../common/console_usb.c
 src/gp2040.cpp
 src/gp2040aux.cpp
 src/gamepad.cpp
