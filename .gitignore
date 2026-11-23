@@ -5,4 +5,4 @@ gp2040-rx/www/build/
 gp2040-rx/www/dist/
 gp2040-rx/lib/httpd/fsdata.c
 __pycache__/
-gp2040-rx/www/src_gen/
+gp2040-rx/www/src_gen/*.ts
