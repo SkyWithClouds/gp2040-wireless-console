@@ -78,3 +78,10 @@ int spi_take(struct gp_frame *frame)
 	if (!count) return 0;
 	return gp_decode(frame, dma[bank].rx, count - 1) ? 1 : -1;
 }
+
+void match_prepare_boot(void)
+{
+    irq_disable(SPIM2_SPIS2_SPI2_IRQn);
+    NRF_GPIOTE->TASKS_CLR[ready_task]=1;
+    nrfx_spis_uninit(&device);
+}
