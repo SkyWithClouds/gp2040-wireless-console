@@ -62,13 +62,25 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build
           test -s ../lib/httpd/fsdata.c
-      - name: Build and check RP2040 application
+      - name: Install verified Arm embedded toolchain
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib libusb-1.0-0-dev pkg-config ninja-build
+          set -euo pipefail
+          archive=xpack-arm-none-eabi-gcc-13.3.1-1.1-linux-x64.tar.gz
+          curl --fail --location --retry 3 --connect-timeout 15 --max-time 240 \
+            "https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v13.3.1-1.1/$archive" -o "$RUNNER_TEMP/$archive"
+          cd "$RUNNER_TEMP"
+          echo "006c89337eced277fdf4c1c3bf3aebe55c85e8d52cba8d412009717fb781b959  $archive" | sha256sum -c -
+          mkdir arm-toolchain
+          tar -xzf "$archive" -C arm-toolchain --strip-components=1
+          "$RUNNER_TEMP/arm-toolchain/bin/arm-none-eabi-gcc" --version
+          echo "$RUNNER_TEMP/arm-toolchain/bin" >> "$GITHUB_PATH"
+      - name: Configure RP2040 application
+        run: |
           cmake -S box/gp2040-rx -B build -G Ninja -DPICO_SDK_PATH="$PWD/sdk" -DPICO_BOARD=pico \
             -DGP2040_BOARDCONFIG=WirelessRxBox -DCMAKE_BUILD_TYPE=Release -DSKIP_WEBBUILD=TRUE -DSKIP_SUBMODULES=TRUE \
             -DPICOTOOL_GIT_BRANCH=de8ae5ac334e1126993f72a5c67949712fd1e1a4
+      - name: Build and validate Pico firmware
+        run: |
           cmake --build build --parallel 4
           stem=build/GP2040-CE_0.7.12_WirelessRxBox
           python3 box/scripts/check_uf2.py "$stem.uf2" "$stem.bin" --pico
