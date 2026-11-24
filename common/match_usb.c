@@ -39,6 +39,7 @@ static int hid_control(struct usb_setup_packet *s,int32_t *len,uint8_t **data)
         k_spinlock_key_t key=k_spin_lock(&lock);
         memcpy(control_copy,last_feature,HID_BYTES);
         k_spin_unlock(&lock,key);
+        if (!memcmp(control_copy,"HX\1",3) && control_copy[3]==MATCH_BOOTLOADER && !control_copy[6]) match_boot_request();
         *data=control_copy; *len=MIN(s->wLength,HID_BYTES);
         return 0;
     }
@@ -127,6 +128,7 @@ bool match_usb_submit(unsigned i,const struct gp_input *s)
 }
 void match_usb_service(void)
 {
+    match_service();
     if(!match_usb_ready()) return;
     struct queued_command cmd;
     if(!k_msgq_get(&commands,&cmd,K_NO_WAIT) && cmd.epoch==atomic_get(&epoch)) {

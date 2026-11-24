@@ -8,3 +8,6 @@ cc "${flags[@]}" tests/protocol_test.c -o "$build/vectors"
 cc "${flags[@]}" tests/console_test.c tests/v1/{transmitter,source}.c common/{console_pad,console_usb}.c \
   rx-bridge/src/{link,receiver}.c -o "$build/console"
 "$build/console"
+
+cc "${flags[@]}" tests/survey_test.c -o "$build/survey"
+"$build/survey"
