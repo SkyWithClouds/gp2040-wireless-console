@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 #include <zephyr/kernel.h>
 #include "air.h"
+#include "match_usb.h"
 #include "spi.h"
 #include "link.h"
 
@@ -8,7 +9,10 @@ int main(void)
 {
 	struct link link;
 	link_init(&link, air_nonce);
-	int rc = air_start(true);
+	match_init(CONSOLE_RX);
+	int rc = match_usb_open(0);
+	if (rc) return rc;
+	rc = air_start(true);
 	if (rc) return rc;
 	rc = spi_init();
 	if (rc) return rc;
@@ -28,6 +32,7 @@ int main(void)
 			reply = link_spi(&link, count > 0 ? &f : NULL, ms);
 			rc = spi_arm(&reply);
 		}
+		match_usb_service();
 		k_sleep(K_USEC(100));
 	}
 	return rc;

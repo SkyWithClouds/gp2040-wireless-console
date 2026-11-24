@@ -14,3 +14,9 @@
 	pinctrl-0 = <&bridge_spis>;
 	pinctrl-names = "default";
 };
+
+/* Keep the original bootloader storage untouched. Carve NVS from our app area. */
+&application { reg = <0x26000 0xc2000>; };
+&{/soc/flash-controller@4001e000/flash@0/partitions} {
+    hitbox_nvs: partition@e8000 { label = "hitbox-nvs"; reg = <0xe8000 0x4000>; };
+};
